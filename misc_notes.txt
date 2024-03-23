@@ -1,0 +1,74 @@
+\Dice-Adventure-Agents\game\dice_adventure.py
+
+so execute action has two ways
+
+    def execute_action(self, player, action):
+        """
+        Applies an action to the player given.
+        :param player: The player to apply an action to
+        :param action: The action to apply
+        :return: N/A
+        """
+        player_code = self.player_code_mapping[player]
+        # self.num_calls += 1
+        if self.track_metrics:
+            # Track agent action
+            self.tracker.update(target="game", metric_name="agent_action", player=player, agent_action=action,
+                                phase=self.phases[self.phase_num])
+
+        if self.phases[self.phase_num] == self.pinning_phase_name:
+            self.pin_planning(player_code, action)
+        elif self.phases[self.phase_num] == self.planning_phase_name:
+            self.action_planning(player_code, action)
+        # If all characters have exhausted their action points, move phase along
+        # If this is turned off, all players must submit first before progressing
+        # if all([obj.action_points <= 0 for obj in self.board.objects.values() if isinstance(obj, Player)]):
+        #     print("EXHAUSTED ACTION POINTS!")
+        #    self.update_phase()
+        # Render grid
+        # if self.render_game:
+        #    self.render()
+
+
+one is if all action points for players are off then move to next stage
+other 
+
+other option is if all players have placed the pin finalized
+            for p in self.player_code_mapping.values():
+                # Reset values
+                self.board.objects[p].pin_x = None
+                self.board.objects[p].pin_y = None
+                self.board.objects[p].pin_finalized = False
+
+other option is if all placers have placed there action palns
+elif curr_phase == self.planning_phase_name \
+                and all([self.board.objects[p].action_plan_finalized
+                         for p in self.player_code_mapping.values()
+                         if not self.board.objects[p].dead]):
+
+not clear to me how to drop the pin
+
+placing a pin costs an action point
+
+undo
+	odes nothing in pin planing phase
+	# Can only undo during action planning if there is an action in the action plan and user has not submitted
+	so can likely ignore undo action
+
+moving costs an action point I think
+
+submit finalizes the pin
+	adds to the scene objects {'name': 'PA', 'type': 'pin', 'x': 1, 'y': 1, 'placedBy': 'Giant'}
+
+submit finalizes the action plan as well
+
+pin action is first select pin type (when you do it resets to your location)
+	then select the directions to where you want to put it
+	then finalize it
+	need a ping selected and submitted to show up in the map
+	only after all 3 submits are done does state move (I think, test next)
+	I don't think the state updates this at all
+	
+
+"VALID_PIN_ACTIONS": ["left", "right", "up", "down", "submit"],
+"VALID_PIN_TYPES": ["pinga", "pingb", "pingc", "pingd"],
