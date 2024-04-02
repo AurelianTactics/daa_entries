@@ -1,6 +1,7 @@
 from game.at_dice_adventure import ATDiceAdventure
 import game.env.unity_socket as unity_socket
 from gymnasium import Env
+from gymnasium import spaces
 from json import loads
 import numpy as np
 
@@ -72,6 +73,13 @@ class ATDiceAdventurePythonEnv(Env):
         self.subgoal_count_current = 0
         self.subgoal_count_prior = 0
         self.subgoal_reward = .333
+
+        self.action_space = spaces.Box(
+            low=-1., high=1., shape=(6,), dtype=np.float32
+        )
+        # self.observation_space = spaces.Box(
+        #     low=self.low_state, high=self.high_state, dtype=np.float32
+        # )
 
     def step(self, action):
         """
@@ -272,3 +280,58 @@ class ATDiceAdventurePythonEnv(Env):
             tower_layer] = tower_value
         
         return obs
+
+
+    def _convert_discrete_action_into_action_list(self, continuous_action_array):
+        '''
+        At action plan time actions can be one of 6 actions: "up", "down", "left", "right", "wait", "submit",
+        Each chose uses an action point
+        Can spend up to 6 action points (based on player configs)
+        Mapping each continuous action to an action plan
+        Ends on first submit or all 6 actions chosen or no action points left
+
+        to do:
+        can penalize or mask or squash for invalid actions
+        '''
+        action_value_up = "up"
+        action_value_down = "down"
+        action_value_left = "left"
+        action_value_right = "right"
+        action_value_wait = "wait"
+        action_value_submit = "submit"
+
+        up_min_value = 2./3.
+        right_min_value = 1./3.
+        submit_min_value = 0
+        left_min_value = -1./3.
+        down_min_value = -2./3.
+
+        action_list = []
+
+        for i in len(continuous_action_array):
+            action_value = continuous_action_array[i]
+
+            if action_value >= submit_min_value:
+                if action_value >= right_min_value:
+                    if action_value >= up_min_value:
+                        action_list.append(action_value_up)
+                    else:
+                        action_list.append(action_value_right)
+                else:
+                    action_list.append(action_value_submit)
+            else:
+                if action_value >= left_min_value:
+                    action_list.append(action_value_wait)
+                else:
+                    if action_value >= down_min_value:
+                        action_list.append(action_value_left)
+                    else:
+                        action_list.append(action_value_up)
+
+        return action_list
+    
+    def _submit_action_plan(self, action_list):
+        '''
+        given an action list submit it to the env
+        '''
+        pass
