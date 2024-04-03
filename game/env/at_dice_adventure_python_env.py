@@ -77,19 +77,21 @@ class ATDiceAdventurePythonEnv(Env):
         self.action_space = spaces.Box(
             low=-1., high=1., shape=(6,), dtype=np.float32
         )
-        # self.observation_space = spaces.Box(
-        #     low=self.low_state, high=self.high_state, dtype=np.float32
-        # )
+
+        self.observation_space = spaces.Box(
+            low=-1., high=1., shape=(self.game.board.width, self.game.board.height, 3), dtype=np.float32
+        )
 
     def step(self, action):
         """
         Applies the given action to the game. Determines the next observation and reward,
         whether the training should terminate, whether training should be truncated, and
         additional info.
-        :param action:  (string) The action produced by the agent
-        :return:        (dict, float, bool, bool, dict) See description
+        
+        
         """
-        game_state = self.execute_action(self.player, action)
+        action_list = self._convert_continuous_action_into_action_list(action)
+        game_state = self._submit_action_plan(action_list)
 
         terminated = self._get_terminated()
         truncated = self._get_truncated()
@@ -282,7 +284,7 @@ class ATDiceAdventurePythonEnv(Env):
         return obs
 
 
-    def _convert_discrete_action_into_action_list(self, continuous_action_array):
+    def _convert_continuous_action_into_action_list(self, continuous_action_array):
         '''
         At action plan time actions can be one of 6 actions: "up", "down", "left", "right", "wait", "submit",
         Each chose uses an action point
@@ -329,9 +331,17 @@ class ATDiceAdventurePythonEnv(Env):
                         action_list.append(action_value_up)
 
         return action_list
-    
+
     def _submit_action_plan(self, action_list):
         '''
         given an action list submit it to the env
+
+        to do: maybe care about action points? for now assume env handles it
         '''
-        pass
+        for action in action_list:
+            info_state = self.execute_action(self.player, action)
+            action_points = self.game.get_player_action_points(self.player)
+            if action == 'submit' or action_points <= 0:
+                break
+
+        return info_state

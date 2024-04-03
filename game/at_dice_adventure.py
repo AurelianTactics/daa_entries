@@ -762,8 +762,15 @@ class ATDiceAdventure:
     def get_is_truncated(self):
 
         return self.is_truncated
-    
+
     def get_subgoal_count(self):
-        
+        '''
+        '''
         return self.board.objects[self.tower].subgoal_count
 
+    def get_player_action_points(self, player):
+        '''
+        '''
+        player_code = self.player_code_mapping[player]
+
+        return self.board.objects[player_code].action_points
