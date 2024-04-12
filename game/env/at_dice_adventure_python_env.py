@@ -79,7 +79,8 @@ class ATDiceAdventurePythonEnv(Env):
         )
 
         self.observation_space = spaces.Box(
-            low=-1., high=1., shape=(self.game.board.width, self.game.board.height, 3), dtype=np.float32
+            low=-1., high=1., shape=(3, self.game.board.height, self.game.board.width,),
+            dtype=np.float32
         )
 
     def step(self, action):
@@ -100,7 +101,7 @@ class ATDiceAdventurePythonEnv(Env):
         if terminated or truncated:
             new_obs, info = self.reset()
         else:
-            new_obs = self.get_state()
+            new_obs = self._get_minimum_testing_obs(self.player)
             info = game_state
 
         return new_obs, reward, terminated, truncated, info
@@ -134,8 +135,9 @@ class ATDiceAdventurePythonEnv(Env):
             self.game = ATDiceAdventure(**self.kwargs)
             self.game.reset_board_and_level()
         game_state = self.get_state()
-        # to do
-        obs = {}
+
+        obs = self._get_minimum_testing_obs(self.player)
+
         return obs, game_state
 
     def execute_action(self, player, game_action):
@@ -241,7 +243,7 @@ class ATDiceAdventurePythonEnv(Env):
             reward += 0.
 
         return reward
-    
+
     def _get_minimum_testing_obs(self, player):
         '''
         One layer for player
@@ -253,11 +255,12 @@ class ATDiceAdventurePythonEnv(Env):
         # then updated here
         # actually maybe this will be standardized accross all levels
         # see how initial training does
-        depth = 3
-        width = self.game.board.width
+        channel = 3
         height = self.game.board.height
+        width = self.game.board.width
+        
 
-        obs = np.zeros([width, height, depth], dtype=np.float32)
+        obs = np.zeros([channel, height, width, ], dtype=np.float32)
 
         player_layer = 0
         shrine_layer = 1
@@ -267,20 +270,23 @@ class ATDiceAdventurePythonEnv(Env):
         shrine_value = 1.
         tower_value = 1.
 
-        obs[self.game.board.objects[self.game.player_code_mapping[player]].x,
+        obs[player_layer,
             self.game.board.objects[self.game.player_code_mapping[player]].y,
-            player_layer] = player_value
-        
+            self.game.board.objects[self.game.player_code_mapping[player]].x,
+            ] = player_value
+
         for i in range(1, 4):
             goal_code = f'{i}G'
-            obs[self.game.board.objects[goal_code].x,
+            obs[shrine_layer,
                 self.game.board.objects[goal_code].y,
-                shrine_layer] = shrine_value
+                self.game.board.objects[goal_code].x,
+                ] = shrine_value
         
-        obs[self.game.board.objects[self.game.tower].x,
+        obs[tower_layer,
             self.game.board.objects[self.game.tower].y,
-            tower_layer] = tower_value
-        
+            self.game.board.objects[self.game.tower].x,
+            ] = tower_value
+
         return obs
 
 
