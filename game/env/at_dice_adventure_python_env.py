@@ -78,8 +78,13 @@ class ATDiceAdventurePythonEnv(Env):
             low=-1., high=1., shape=(6,), dtype=np.float32
         )
 
+        # Stacks of images
+        # self.observation_space = spaces.Box(
+        #     low=-1., high=1., shape=(3, self.game.board.height, self.game.board.width,),
+        #     dtype=np.float32
+        # )
         self.observation_space = spaces.Box(
-            low=-1., high=1., shape=(3, self.game.board.height, self.game.board.width,),
+            low=-1., high=1., shape=(self.game.board.height * self.game.board.width,),
             dtype=np.float32
         )
 
@@ -93,6 +98,7 @@ class ATDiceAdventurePythonEnv(Env):
         """
         action_list = self._convert_continuous_action_into_action_list(action)
         game_state = self._submit_action_plan(action_list)
+        game_state = self._skip_player_pinning_phase(game_state)
 
         terminated = self._get_terminated()
         truncated = self._get_truncated()
@@ -101,7 +107,7 @@ class ATDiceAdventurePythonEnv(Env):
         if terminated or truncated:
             new_obs, info = self.reset()
         else:
-            new_obs = self._get_minimum_testing_obs(self.player)
+            new_obs = self._get_minimum_testing_obs_1D(self.player)
             info = game_state
 
         return new_obs, reward, terminated, truncated, info
@@ -136,7 +142,9 @@ class ATDiceAdventurePythonEnv(Env):
             self.game.reset_board_and_level()
         game_state = self.get_state()
 
-        obs = self._get_minimum_testing_obs(self.player)
+        game_state = self._skip_player_pinning_phase(game_state)
+
+        obs = self._get_minimum_testing_obs_1D(self.player)
 
         return obs, game_state
 
@@ -288,6 +296,45 @@ class ATDiceAdventurePythonEnv(Env):
             ] = tower_value
 
         return obs
+    
+    def _get_minimum_testing_obs_1D(self, player):
+        '''
+        One layer for player
+        One layer for shrines
+        One layer for towers
+        '''
+        # to do:
+        # on reset can init the board basics once based on level
+        # then updated here
+        # actually maybe this will be standardized accross all levels
+        # see how initial training does
+
+        obs = np.zeros(self.observation_space.shape)
+
+        player_value = -0.5
+        shrine_value = 0.5
+        tower_value = 1.
+
+        board_height = self.game.board.height
+        board_width = self.game.board.width
+
+        player_index = self.game.board.objects[self.game.player_code_mapping[player]].y * board_width \
+            + self.game.board.objects[self.game.player_code_mapping[player]].x
+        
+        obs[player_index] = player_value
+
+        tower_index = self.game.board.objects[self.game.tower].y * board_width \
+            + self.game.board.objects[self.game.tower].x
+        
+        obs[tower_index] = tower_value
+
+        for i in range(1, 4):
+            goal_code = f'{i}G'
+            shrine_index = self.game.board.objects[goal_code].y * board_width \
+                + self.game.board.objects[goal_code].x
+            obs[shrine_index] = shrine_value
+
+        return obs
 
 
     def _convert_continuous_action_into_action_list(self, continuous_action_array):
@@ -351,3 +398,16 @@ class ATDiceAdventurePythonEnv(Env):
                 break
 
         return info_state
+
+    def _skip_player_pinning_phase(self, game_state):
+        '''
+        Simple version where only take an action during planning and skip
+        player pinning
+        '''
+        if game_state['content']['gameData']['currentPhase'] == 'Player_Pinning':
+            # submit all actions from players
+            _ = self.execute_action('Dwarf', 'submit')
+            _ = self.execute_action('Human', 'submit')
+            game_state = self.execute_action('Giant', 'submit')
+
+        return game_state
