@@ -363,7 +363,7 @@ class ATDiceAdventurePythonEnv(Env):
 
         action_list = []
 
-        for i in len(continuous_action_array):
+        for i in range(len(continuous_action_array)):
             action_value = continuous_action_array[i]
 
             if action_value >= submit_min_value:
@@ -381,7 +381,7 @@ class ATDiceAdventurePythonEnv(Env):
                     if action_value >= down_min_value:
                         action_list.append(action_value_left)
                     else:
-                        action_list.append(action_value_up)
+                        action_list.append(action_value_down)
 
         return action_list
 
@@ -397,7 +397,24 @@ class ATDiceAdventurePythonEnv(Env):
             if action == 'submit' or action_points <= 0:
                 break
 
+        # submit non-player actions
+        # to do: make this more advanced
+        self._submit_non_player_turn(self.player)
+
         return info_state
+    
+    def _submit_non_player_turn(self, current_player):
+        '''
+        All players must submit actions for env to advance
+        Player actions ubmited in _submit_action_play
+        This takes care of the other players
+        Can make this more advanced.
+        To do: random, scripted plan
+            or off of a pre-trained agent etc
+        '''
+        for player in ['Dwarf', 'Human', 'Giant']:
+            if player != current_player:
+                self.execute_action(player, 'submit')
 
     def _skip_player_pinning_phase(self, game_state):
         '''
