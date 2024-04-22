@@ -382,7 +382,7 @@ class ATDiceAdventurePythonEnv(Env):
                         action_list.append(action_value_left)
                     else:
                         action_list.append(action_value_down)
-
+        print("in convert action list ", action_list)
         return action_list
 
     def _submit_action_plan(self, action_list):
@@ -391,11 +391,29 @@ class ATDiceAdventurePythonEnv(Env):
 
         to do: maybe care about action points? for now assume env handles it
         '''
+        action_list_submitted = False
         for action in action_list:
+            print(f" submitting action {action}")
             info_state = self.execute_action(self.player, action)
             action_points = self.game.get_player_action_points(self.player)
-            if action == 'submit' or action_points <= 0:
+            print(f"action_points {action_points}")
+            if action == 'submit':
+                # submit occured, end submitting actions
+                print("submit entered, ending action_list")
+                action_list_submitted = True
                 break
+    
+            if action_points <= 0:
+                # all action points spent. submit action plan and be done
+                info_state = self.execute_action(self.player, 'submit')
+                print("action points spent, ending action_list")
+                action_list_submitted = True
+                break
+
+        if not action_list_submitted:
+            # if an action is invalid, action points will not be spent
+            print("submitting after going through action list")
+            info_state = self.execute_action(self.player, 'submit')
 
         # submit non-player actions
         # to do: make this more advanced
