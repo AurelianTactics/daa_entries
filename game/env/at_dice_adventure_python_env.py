@@ -96,9 +96,23 @@ class ATDiceAdventurePythonEnv(Env):
         
         
         """
+        print("testing step, initial game state is")
+        print(self.game.get_state(self.player))
         action_list = self._convert_continuous_action_into_action_list(action)
         game_state = self._submit_action_plan(action_list)
+        print("testing step before player pinning phase, game state is ")
+        print("my game state")
+        print(game_state)
+        print("call to game state")
+        print(self.game.get_state(self.player))
+        print("-----")
         game_state = self._skip_player_pinning_phase(game_state)
+        print("testing step, after player pinning skip phase game state is ")
+        print("my game state")
+        print(game_state)
+        print("call to game state")
+        print(self.game.get_state(self.player))
+        print("-----")
 
         terminated = self._get_terminated()
         truncated = self._get_truncated()
@@ -109,7 +123,11 @@ class ATDiceAdventurePythonEnv(Env):
         else:
             new_obs = self._get_minimum_testing_obs_1D(self.player)
             info = game_state
-
+        print("testing step, info is")
+        print(info)
+        print("testing step, final game state is")
+        print(self.game.get_state(self.player))
+        print("-------------------")
         return new_obs, reward, terminated, truncated, info
 
     def close(self):
@@ -394,7 +412,7 @@ class ATDiceAdventurePythonEnv(Env):
         action_list_submitted = False
         for action in action_list:
             print(f" submitting action {action}")
-            info_state = self.execute_action(self.player, action)
+            player_info_state = self.execute_action(self.player, action)
             action_points = self.game.get_player_action_points(self.player)
             print(f"action_points {action_points}")
             if action == 'submit':
@@ -405,7 +423,7 @@ class ATDiceAdventurePythonEnv(Env):
     
             if action_points <= 0:
                 # all action points spent. submit action plan and be done
-                info_state = self.execute_action(self.player, 'submit')
+                player_info_state = self.execute_action(self.player, 'submit')
                 print("action points spent, ending action_list")
                 action_list_submitted = True
                 break
@@ -413,11 +431,11 @@ class ATDiceAdventurePythonEnv(Env):
         if not action_list_submitted:
             # if an action is invalid, action points will not be spent
             print("submitting after going through action list")
-            info_state = self.execute_action(self.player, 'submit')
+            player_info_state = self.execute_action(self.player, 'submit')
 
         # submit non-player actions
         # to do: make this more advanced
-        self._submit_non_player_turn(self.player)
+        info_state = self._submit_non_player_turn(self.player)
 
         return info_state
     
@@ -432,7 +450,9 @@ class ATDiceAdventurePythonEnv(Env):
         '''
         for player in ['Dwarf', 'Human', 'Giant']:
             if player != current_player:
-                self.execute_action(player, 'submit')
+                info_state = self.execute_action(player, 'submit')
+
+        return info_state
 
     def _skip_player_pinning_phase(self, game_state):
         '''
